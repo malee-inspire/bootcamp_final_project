@@ -1,0 +1,6 @@
+fastapi
+pymongo
+pydantic
+snowflake.connector
+pandas
+marshmallow
