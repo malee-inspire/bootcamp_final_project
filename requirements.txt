@@ -4,3 +4,6 @@ pydantic
 snowflake.connector
 pandas
 marshmallow
+dash
+fbprophet
+sklearn

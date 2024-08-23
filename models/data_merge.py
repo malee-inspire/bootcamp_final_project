@@ -47,7 +47,31 @@ def main():
     conn = snow_create_connection()
 
     cur = conn.cursor()
-    create_table(cur)
+    try:
+        # create_table(cur)
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS "globalData" (
+                "countryName" VARCHAR(70),
+                "wbCountryCode" VARCHAR(20),
+                "m49code" FLOAT,
+                "iso3166Alpha2Code" VARCHAR(4),
+                "wbRegion" VARCHAR,
+                "wbRegionCode" VARCHAR,
+                "wbIncomeLevelCode" VARCHAR,
+                "wbIncomeLevelName" VARCHAR,
+                "wbPopulation2019" FLOAT,
+                "owidHasVaccine" VARCHAR,
+                "mostRecentResponseDate" DATE,
+                "mostRecentExtendedBreakCode" INT,  -- Fixed: removed the (2)
+                "mostRecentEducationStatusCode" VARCHAR,
+                "mostRecentEducationStatusPrePrimaryCode" VARCHAR,
+                "mostRecentVaccineAvailabilityForTeachersCode" VARCHAR
+            );
+        ''')
+
+    except Exception as e:
+        print(f"table creation error : {e}")
 
     ### commit the transaction
     conn.commit()
@@ -55,7 +79,7 @@ def main():
     df.reset_index(drop=True, inplace=True)
 
     ###write the DataFrame to Snowflake
-    write_pandas(conn, df, table_name="global-data")
+    write_pandas(conn, df, table_name="globalData")
 
     ### close the connection after load data
     cur.close()

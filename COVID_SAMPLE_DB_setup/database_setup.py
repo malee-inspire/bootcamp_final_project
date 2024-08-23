@@ -16,5 +16,5 @@ def create_table(cur):
             "mostRecentEducationStatusCode" VARCHAR,
             "mostRecentEducationStatusPrePrimaryCode" VARCHAR,
             "mostRecentVaccineAvailabilityForTeachersCode" VARCHAR
-        )
+        );
     ''')
