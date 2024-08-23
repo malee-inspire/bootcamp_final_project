@@ -8,12 +8,7 @@ from typing import List, Optional
 from bson import ObjectId
 from routes.mongo_conn import get_mongo_connection
 import snowflake.connector
-from fbprophet import Prophet
-import pandas as pd
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
 import logging
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -88,66 +83,6 @@ async def query_data(table: str, country: Optional[str] = None, state: Optional[
     data = [dict(zip(columns, row)) for row in result]
     return {"data": data}
 
-#### Time Series Forecasting
-@app.get("/forecast/")
-async def forecast_data(table: str, country: Optional[str] = None, date: Optional[str] = None):
-    query = f'SELECT DATE, CONFIRMED FROM COVID_SAMPLE_DB.MERGED_INSIGHTS."{table}" WHERE 1=1'
-
-    if country:
-        query += f" AND COUNTRY_REGION = '{country}'"
-    if date:
-        query += f" AND DATE <= '{date}'"
-
-    logger.info(f"Executing query: {query}")
-
-    cursor = conn.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    cursor.close()
-
-    df = pd.DataFrame(result, columns=columns)
-    df['DATE'] = pd.to_datetime(df['DATE'])
-    df.rename(columns={'DATE': 'ds', 'CONFIRMED': 'y'}, inplace=True)
-
-    # Initialize Prophet model
-    model = Prophet()
-    model.fit(df)
-
-    # Create future dataframe
-    future = model.make_future_dataframe(periods=30)  # Forecasting 30 days ahead
-    forecast = model.predict(future)
-
-    forecast_data = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(30).to_dict('records')
-    return {"forecast": forecast_data}
-
-@app.get("/clustering/")
-async def clustering_data():
-    query = """
-        SELECT COUNTRY_REGION, DATE, CONFIRMED, DEATHS
-        FROM COVID_SAMPLE_DB.MERGED_INSIGHTS."JHU_DASHBOARD_COVID_19_GLOBAL"
-    """
-    cursor = conn.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    cursor.close()
-
-    df = pd.DataFrame(result, columns=columns)
-    df['DATE'] = pd.to_datetime(df['DATE'])
-    df = df.groupby(['COUNTRY_REGION', 'DATE']).agg({'CONFIRMED': 'sum', 'DEATHS': 'sum'}).reset_index()
-
-    # Feature extraction
-    features = df.groupby('COUNTRY_REGION').agg({'CONFIRMED': 'sum', 'DEATHS': 'sum'}).reset_index()
-    X = features[['CONFIRMED', 'DEATHS']]
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    # Apply KMeans
-    kmeans = KMeans(n_clusters=3, random_state=0)
-    features['Cluster'] = kmeans.fit_predict(X_scaled)
-
-    return {"clusters": features.to_dict('records')}
 
 ### Post Comments to MongoDB
 @app.post("/comments/")
